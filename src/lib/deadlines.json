@@ -1,0 +1,292 @@
+[
+  {
+    "id": "acara-01",
+    "divisi": "Acara",
+    "tugas": "Konsep kegiatan tiap agenda (tema, waktu, lokasi)",
+    "pic": "Ainun, Amel",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-09",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-04"
+  },
+  {
+    "id": "acara-02",
+    "divisi": "Acara",
+    "tugas": "Rundown acara",
+    "pic": "Tarra, Aqilah, Denis",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-09",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-04"
+  },
+  {
+    "id": "acara-03",
+    "divisi": "Acara",
+    "tugas": "List perlengkapan & RAB",
+    "pic": "Ainun, Atun, Amel",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-09",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-04"
+  },
+  {
+    "id": "acara-04",
+    "divisi": "Acara",
+    "tugas": "Buat TOR",
+    "pic": "Ainun, Ismy, kak Nira",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-09",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-04"
+  },
+  {
+    "id": "acara-05",
+    "divisi": "Acara",
+    "tugas": "Tentukan PJ tiap rangkaian acara",
+    "pic": "Ainun",
+    "start_date": "2026-08-07",
+    "deadline_date": "2026-10-10",
+    "duration_days": 64,
+    "reminder_start_date": "2026-09-30"
+  },
+  {
+    "id": "acara-06",
+    "divisi": "Acara",
+    "tugas": "Tentukan souvenir peserta",
+    "pic": "Atun, Aqilah",
+    "start_date": "2026-08-07",
+    "deadline_date": "2026-09-24",
+    "duration_days": 48,
+    "reminder_start_date": "2026-09-14"
+  },
+  {
+    "id": "pdd-01",
+    "divisi": "PDD",
+    "tugas": "List perlengkapan & RAB",
+    "pic": "",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-09",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-04"
+  },
+  {
+    "id": "pdd-02",
+    "divisi": "PDD",
+    "tugas": "Cover & background proposal",
+    "pic": "Salsa",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-09",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-04"
+  },
+  {
+    "id": "pdd-03",
+    "divisi": "PDD",
+    "tugas": "Banner",
+    "pic": "Salsa",
+    "start_date": "2026-08-08",
+    "deadline_date": "2026-10-17",
+    "duration_days": 70,
+    "reminder_start_date": "2026-10-07"
+  },
+  {
+    "id": "pdd-04",
+    "divisi": "PDD",
+    "tugas": "ID Card panitia",
+    "pic": "AF",
+    "start_date": "2026-08-08",
+    "deadline_date": "2026-10-17",
+    "duration_days": 70,
+    "reminder_start_date": "2026-10-07"
+  },
+  {
+    "id": "pdd-05",
+    "divisi": "PDD",
+    "tugas": "Sertifikat pemateri & peserta",
+    "pic": "Adit",
+    "start_date": "2026-08-08",
+    "deadline_date": "2026-10-17",
+    "duration_days": 70,
+    "reminder_start_date": "2026-10-07"
+  },
+  {
+    "id": "pdd-06",
+    "divisi": "PDD",
+    "tugas": "Plakat pemateri",
+    "pic": "kak Nadine",
+    "start_date": "2026-08-08",
+    "deadline_date": "2026-10-17",
+    "duration_days": 70,
+    "reminder_start_date": "2026-10-07"
+  },
+  {
+    "id": "pdd-07",
+    "divisi": "PDD",
+    "tugas": "Pamflet Workshop",
+    "pic": "",
+    "start_date": "2026-08-08",
+    "deadline_date": "2026-10-21",
+    "duration_days": 74,
+    "reminder_start_date": "2026-10-11"
+  },
+  {
+    "id": "pdd-08",
+    "divisi": "PDD",
+    "tugas": "Arsip dokumentasi",
+    "pic": "AF, Saskia",
+    "start_date": "2026-10-24",
+    "deadline_date": "2026-10-27",
+    "duration_days": 3,
+    "reminder_start_date": "2026-10-25"
+  },
+  {
+    "id": "humkes-01",
+    "divisi": "Humkes",
+    "tugas": "List kebutuhan & RAB",
+    "pic": "",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-09",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-04"
+  },
+  {
+    "id": "humkes-02",
+    "divisi": "Humkes",
+    "tugas": "Proposal penyelenggaraan acara & sponsorship",
+    "pic": "",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-09",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-04"
+  },
+  {
+    "id": "humkes-03",
+    "divisi": "Humkes",
+    "tugas": "Surat permohonan izin",
+    "pic": "",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-12",
+    "duration_days": 10,
+    "reminder_start_date": "2026-08-05"
+  },
+  {
+    "id": "humkes-04",
+    "divisi": "Humkes",
+    "tugas": "Surat kontrak kerjasama & sponsorship",
+    "pic": "",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-12",
+    "duration_days": 10,
+    "reminder_start_date": "2026-08-05"
+  },
+  {
+    "id": "humkes-05",
+    "divisi": "Humkes",
+    "tugas": "Surat undangan",
+    "pic": "",
+    "start_date": "2026-08-07",
+    "deadline_date": "2026-10-17",
+    "duration_days": 71,
+    "reminder_start_date": "2026-10-07"
+  },
+  {
+    "id": "humkes-06",
+    "divisi": "Humkes",
+    "tugas": "Cetak ID Card panitia",
+    "pic": "",
+    "start_date": "2026-08-07",
+    "deadline_date": "2026-10-21",
+    "duration_days": 75,
+    "reminder_start_date": "2026-10-11"
+  },
+  {
+    "id": "humkes-07",
+    "divisi": "Humkes",
+    "tugas": "Siapkan presensi, daftar hadir & rundown",
+    "pic": "",
+    "start_date": "2026-08-07",
+    "deadline_date": "2026-10-21",
+    "duration_days": 75,
+    "reminder_start_date": "2026-10-11"
+  },
+  {
+    "id": "konsumsi-01",
+    "divisi": "Konsumsi",
+    "tugas": "List kebutuhan & RAB",
+    "pic": "Aulia",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-09",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-04"
+  },
+  {
+    "id": "perkam-01",
+    "divisi": "Perkam",
+    "tugas": "RAB perlengkapan & keamanan",
+    "pic": "",
+    "start_date": "2026-08-02",
+    "deadline_date": "2026-08-09",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-04"
+  },
+  {
+    "id": "perkam-02",
+    "divisi": "Perkam",
+    "tugas": "Merancang perlengkapan tiap divisi",
+    "pic": "",
+    "start_date": "2026-08-09",
+    "deadline_date": "2026-08-16",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-11"
+  },
+  {
+    "id": "perkam-03",
+    "divisi": "Perkam",
+    "tugas": "Mendata & pengadaan perlengkapan",
+    "pic": "",
+    "start_date": "2026-08-09",
+    "deadline_date": "2026-08-16",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-11"
+  },
+  {
+    "id": "perkam-04",
+    "divisi": "Perkam",
+    "tugas": "List barang pinjaman",
+    "pic": "",
+    "start_date": "2026-08-09",
+    "deadline_date": "2026-08-16",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-11"
+  },
+  {
+    "id": "perkam-05",
+    "divisi": "Perkam",
+    "tugas": "Konsep keamanan acara",
+    "pic": "",
+    "start_date": "2026-08-07",
+    "deadline_date": "2026-10-10",
+    "duration_days": 64,
+    "reminder_start_date": "2026-09-30"
+  },
+  {
+    "id": "perkam-06",
+    "divisi": "Perkam",
+    "tugas": "Persiapan sarana & penataan keamanan",
+    "pic": "",
+    "start_date": "2026-08-07",
+    "deadline_date": "2026-10-10",
+    "duration_days": 64,
+    "reminder_start_date": "2026-09-30"
+  },
+  {
+    "id": "perkam-07",
+    "divisi": "Perkam",
+    "tugas": "Koordinasi dengan satpam",
+    "pic": "",
+    "start_date": "2026-08-07",
+    "deadline_date": "2026-10-17",
+    "duration_days": 71,
+    "reminder_start_date": "2026-10-07"
+  }
+]
