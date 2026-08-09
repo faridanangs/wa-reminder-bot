@@ -288,5 +288,25 @@
     "deadline_date": "2026-10-17",
     "duration_days": 71,
     "reminder_start_date": "2026-10-07"
+  },
+  {
+    "id": "tes1-01",
+    "divisi": "Tes1",
+    "tugas": "Contoh tugas simulasi grup Tes1",
+    "pic": "Tim Dev",
+    "start_date": "2026-08-05",
+    "deadline_date": "2026-08-12",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-05"
+  },
+  {
+    "id": "tes2-01",
+    "divisi": "Tes2",
+    "tugas": "Contoh tugas simulasi grup Tes2",
+    "pic": "Tim Dev",
+    "start_date": "2026-08-05",
+    "deadline_date": "2026-08-12",
+    "duration_days": 7,
+    "reminder_start_date": "2026-08-05"
   }
 ]
