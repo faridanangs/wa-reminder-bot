@@ -25,9 +25,10 @@
     "tugas": "List perlengkapan & RAB",
     "pic": "Ainun, Atun, Amel",
     "start_date": "2026-08-02",
-    "deadline_date": "2026-08-09",
-    "duration_days": 7,
-    "reminder_start_date": "2026-08-04"
+    "deadline_date": "2026-08-10",
+    "duration_days": 8,
+    "reminder_start_date": "2026-08-04",
+    "_note": "deadline diperpanjang (lihat pesan)"
   },
   {
     "id": "acara-04",
@@ -65,9 +66,10 @@
     "tugas": "List perlengkapan & RAB",
     "pic": "",
     "start_date": "2026-08-02",
-    "deadline_date": "2026-08-09",
-    "duration_days": 7,
-    "reminder_start_date": "2026-08-04"
+    "deadline_date": "2026-08-11",
+    "duration_days": 9,
+    "reminder_start_date": "2026-08-04",
+    "_note": "deadline diperpanjang (lihat pesan)"
   },
   {
     "id": "pdd-02",
@@ -145,9 +147,10 @@
     "tugas": "List kebutuhan & RAB",
     "pic": "",
     "start_date": "2026-08-02",
-    "deadline_date": "2026-08-09",
-    "duration_days": 7,
-    "reminder_start_date": "2026-08-04"
+    "deadline_date": "2026-08-10",
+    "duration_days": 8,
+    "reminder_start_date": "2026-08-04",
+    "_note": "deadline diperpanjang (lihat pesan)"
   },
   {
     "id": "humkes-02",
@@ -215,9 +218,10 @@
     "tugas": "List kebutuhan & RAB",
     "pic": "Aulia",
     "start_date": "2026-08-02",
-    "deadline_date": "2026-08-09",
-    "duration_days": 7,
-    "reminder_start_date": "2026-08-04"
+    "deadline_date": "2026-08-10",
+    "duration_days": 8,
+    "reminder_start_date": "2026-08-04",
+    "_note": "deadline diperpanjang (lihat pesan)"
   },
   {
     "id": "perkam-01",
@@ -225,9 +229,10 @@
     "tugas": "RAB perlengkapan & keamanan",
     "pic": "",
     "start_date": "2026-08-02",
-    "deadline_date": "2026-08-09",
-    "duration_days": 7,
-    "reminder_start_date": "2026-08-04"
+    "deadline_date": "2026-08-10",
+    "duration_days": 8,
+    "reminder_start_date": "2026-08-04",
+    "_note": "deadline diperpanjang (lihat pesan)"
   },
   {
     "id": "perkam-02",
@@ -288,25 +293,5 @@
     "deadline_date": "2026-10-17",
     "duration_days": 71,
     "reminder_start_date": "2026-10-07"
-  },
-  {
-    "id": "tes1-01",
-    "divisi": "Tes1",
-    "tugas": "Contoh tugas simulasi grup Tes1",
-    "pic": "Tim Dev",
-    "start_date": "2026-08-05",
-    "deadline_date": "2026-08-12",
-    "duration_days": 7,
-    "reminder_start_date": "2026-08-05"
-  },
-  {
-    "id": "tes2-01",
-    "divisi": "Tes2",
-    "tugas": "Contoh tugas simulasi grup Tes2",
-    "pic": "Tim Dev",
-    "start_date": "2026-08-05",
-    "deadline_date": "2026-08-12",
-    "duration_days": 7,
-    "reminder_start_date": "2026-08-05"
   }
 ]
