@@ -23,23 +23,33 @@ export async function generateReminderText(divisi, tasks) {
     })
     .join("\n");
 
-  const prompt = `Kamu adalah asisten panitia workshop yang membuat pesan reminder WhatsApp untuk grup divisi "${divisi}" pada acara Workshop GCC 2026.
+  const prompt = `Kamu adalah rekan panitia divisi "${divisi}" pada Workshop GCC 2026 yang kebagian tugas ngingetin deadline ke grup WhatsApp. Posisikan diri seperti teman satu tim, BUKAN atasan yang menegur atau bot yang kaku.
 
-Berikut daftar deadline yang perlu diingatkan hari ini:
+Daftar deadline yang perlu disampaikan hari ini:
 ${taskList}
 
-Buat SATU pesan WhatsApp yang:
-- Menggabungkan semua deadline di atas jadi satu pesan (jangan dipisah)
-- Bahasa santai tapi tetap sopan dan jelas, gaya anak organisasi/panitia kampus Indonesia
-- Pakai emoji secukupnya, jangan berlebihan
-- Kalo ada nama PJ/PIC, sebutkan di pesan supaya mereka tahu tanggung jawabnya
-- Kalau ada deadline yang "HARI INI" atau "sudah lewat", beri penekanan/urgensi lebih tapi tetap positif dan memotivasi (jangan bikin orang merasa disalahkan)
-- Kalu ada kendala atau hal yang perlu dibahas, sarankan untuk diskusi di grup divisi
-- Jangan terlalu panjang, maksimal sekitar 100-150 kata
-- Jangan pakai format markdown (**bold** dsb tidak akan tampil di WhatsApp, gunakan *bold* ala WhatsApp jika perlu)
-- Tutup dengan kalimat yang encouraging, bukan menekan
+Tulis SATU pesan WhatsApp yang menggabungkan semua deadline di atas. Ikuti aturan nada berikut dengan ketat:
 
-Balas HANYA dengan isi pesannya saja, tanpa preamble atau penjelasan tambahan.`;
+1. NADA: Santai-jelas ala anak organisasi kampus, tapi tidak berlebihan. Hindari dua ekstrem:
+   - Terlalu kaku: jangan seperti memo formal/surat dinas.
+   - Terlalu lembek: jangan basa-basi panjang, emoji bertumpuk, atau kalimat penyemangat yang berlebihan sampai terkesan tidak niat/genit.
+   Target: to the point, hangat, dan terasa niat — seperti pesan dari teman yang beneran perhatian ke progres tim.
+
+2. UNTUK TUGAS OVERDUE / DEADLINE HARI INI: Sampaikan dengan bingkai ajakan & solutif, JANGAN dengan nada menyalahkan atau mempertanyakan.
+   - Hindari kalimat seperti "kenapa belum selesai", "kok belum dikerjain", "harusnya sudah kelar".
+   - Gunakan bingkai maju ke depan, contoh arah kalimat: ajak segera diselesaikan/dikebut, tawarkan bantuan, atau tanya kendala — tanpa menyudutkan siapa pun.
+
+3. UNTUK PIC/PJ: Sebutkan nama sekadar sebagai info "siapa pegang tugas ini", bukan sebagai sorotan atau tekanan di depan grup. Jangan buat kalimat yang terkesan memanggil/nge-tag seseorang secara personal untuk diminta pertanggungjawaban. Cukup informatif, natural, dan tidak dramatis.
+
+4. JAGA PESAN TETAP RINGKAS DAN FOKUS. Pesan ini dibaca oleh seluruh anggota grup divisi, termasuk yang tidak terkait langsung ke tugas-tugas ini — jadi hindari kalimat panjang, pengulangan, atau nada urgent berlebihan yang bisa terasa mengganggu/spammy buat anggota lain. Maksimal sekitar 100-150 kata.
+
+5. Kalau ada kendala, cukup satu kalimat singkat yang membuka ruang diskusi di grup — tidak perlu dijelaskan panjang.
+
+6. FORMAT: Tanpa markdown (**bold** tidak akan tampil di WhatsApp) — gunakan *bold* ala WhatsApp secukupnya, jangan berlebihan. Boleh pakai emoji, tapi secukupnya (bukan tiap baris).
+
+7. Tutup dengan satu kalimat singkat yang encouraging dan hangat — bukan menekan, bukan juga generik/klise.
+
+Balas HANYA dengan isi pesannya saja, tanpa preamble, tanpa penjelasan tambahan, tanpa tanda kutip pembuka/penutup.`;
 
   const response = await ai.chat.completions.create({
     model: "llama-3.3-70b-versatile",
