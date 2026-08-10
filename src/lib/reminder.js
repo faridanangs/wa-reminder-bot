@@ -4,7 +4,7 @@ const deadlines = require("./deadlines.json");
 
 // Berapa hari setelah deadline lewat, reminder masih dikirim.
 // Setelah ini, task dianggap "selesai diingatkan" dan tidak di-follow-up lagi.
-const OVERDUE_GRACE_DAYS = 4;
+const OVERDUE_GRACE_DAYS = 3;
 
 /**
  * Format a Date object as YYYY-MM-DD in a given IANA timezone.
@@ -25,23 +25,13 @@ function daysBetween(a, b) {
   return Math.round((dateB.getTime() - dateA.getTime()) / 86400000);
 }
 
-/**
- * Returns tasks grouped by divisi that should be reminded today.
- *
- * A task is included if:
- *   - today >= reminder_start_date, AND
- *   - today <= deadline_date + OVERDUE_GRACE_DAYS
- *
- * Artinya kalau deadline sudah lewat, task masih diingatkan sampai
- * maksimal 4 hari setelahnya, lalu berhenti otomatis (dianggap
- * sudah cukup di-follow-up, entah beres atau tidak — tidak dipaksa terus).
- */
+
 export function getTodaysReminders(now = new Date()) {
   const todayStr = toDateStringInTZ(now);
   const grouped = {};
 
   for (const task of deadlines) {
-    
+
     if (task.completed) continue;
 
     const daysRemaining = daysBetween(todayStr, task.deadline_date);
