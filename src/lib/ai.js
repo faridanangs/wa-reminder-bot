@@ -6,7 +6,7 @@ const ai = new OpenAI({
 });
 
 const STATIC_DISCLAIMER =
-  "\n\n_EAI._";
+  "\n\n_Klo jobdesnya udah beres pesannya abaikan saja gaess, botnya berhenti ngingetin setelah 3 hari dari deadline_";
 
 /**
  * Generate a single, friendly WhatsApp reminder message that bundles
