@@ -83,21 +83,23 @@ ${taskList}
 
 Buat SATU pesan WhatsApp yang:
 - Menggabungkan semua deadline di atas jadi satu pesan (jangan dipisah)
-- Bahasa santai gaya anak organisasi/panitia kampus, TAPI to the point dan jelas — bukan basa-basi panjang, bukan muter-muter, bukan sok formal juga
-- Pakai emoji secukupnya, jangan berlebihan (2-5 emoji total)
-- Untuk deadline "HARI INI" atau "BESOK": to the point, jelas bahwa ini urgent, boleh pakai kata seperti "gaskan", "kelarin hari ini ya", "jangan sampai kelewat" — tegas tapi tetap suportif, bukan mengancam
-- Untuk item "lewat dari deadline": tetap tegas soal statusnya perlu di-update SEKARANG (bukan opsional, bukan "kapan-kapan boleh update"), tapi jangan menuduh belum dikerjakan. Formulanya: state fakta (sudah lewat X hari) + minta update konkret, TANPA basa-basi permintaan maaf berlebihan atau kalimat pemanis yang bikin pesannya kehilangan urgensi. Contoh nada yang benar: "udah lewat 2 hari nih, kalau udah kelar tolong kabarin, kalau masih proses juga oke tapi kabarin progressnya ya" — jelas, actionable, tapi tidak menuduh.
-- Hindari kalimat pembuka/penutup yang terlalu panjang dan generic seperti "Semangat terus ya teman-teman kita pasti bisa melalui semua ini bersama-sama". Langsung ke isi, baru penutup singkat 1 kalimat yang encouraging tapi natural (bukan template motivasi).
-- Jangan terlalu panjang, maksimal sekitar 80-120 kata
-- Jangan pakai format markdown (**bold** dsb tidak akan tampil di WhatsApp, gunakan *bold* ala WhatsApp jika perlu untuk menandai nama tugas atau kata "HARI INI"/"lewat deadline")
+- Gaya nulisnya kayak orang beneran ngetik cepat di WA ke temen se-organisasi, BUKAN kayak template pesan otomatis. To the point, nggak muter-muter, nggak sok formal, nggak juga terlalu berusaha "menyemangati"
+- Pakai emoji secukupnya (2-4 total), jangan taruh emoji di akhir tiap kalimat — cukup 1-2 titik yang emang perlu penekanan
+- DILARANG pakai kalimat penutup generic seperti "Semangat!", "Gaskan!", "Kita pasti bisa", atau variasi template motivasi lain di akhir pesan. Kalau mau nutup, buat kalimat yang related langsung ke konteks task-nya (misal ngingetin due date terakhir, atau nawarin bantu kalau ada kendala) — bukan penutup yang bisa ditempel ke pesan apa aja
+- DILARANG nambahin alasan/justifikasi kenapa tugas itu penting (misal "karena kita butuh ini untuk tahap berikutnya") kecuali itu emang ada di data. Fokus ke fakta: apa tugasnya, siapa PIC-nya, statusnya gimana
+- Untuk deadline "HARI INI"/"BESOK": langsung sebutkan urgent-nya, tanpa berputar-putar, cukup sekali bilang bukan diulang-ulang dengan kata berbeda ("kelarin hari ini ya... gaskan sekarang juga... jangan sampai kelewat" — ini KEBANYAKAN, pilih SATU cara bilang urgent aja)
+- Untuk item "lewat dari deadline": state fakta (lewat berapa hari) + minta update sekali, singkat, tanpa berasumsi belum dikerjakan. Jangan pakai kalimat pemanis atau permintaan maaf
+- Kalau ada beberapa task dengan status beda-beda, susun singkat per task (boleh pakai baris baru per item), jangan digabung jadi satu kalimat panjang berbelit
+- Total maksimal 60-100 kata — LEBIH PENDEK dari draft biasa, karena tiap kalimat harus mengandung informasi baru, bukan pengulangan
+- Jangan pakai markdown (**bold**), pakai *bold* ala WhatsApp kalau perlu untuk nama tugas atau kata kunci status
 
 Balas HANYA dengan isi pesannya saja, tanpa preamble atau penjelasan tambahan.`;
 
   const response = await ai.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [{ role: "user", content: prompt }],
-    temperature: 0.5,
-    max_tokens: 500,
+    temperature: 0.6,
+    max_tokens: 400,
   });
 
   const text = response.choices[0]?.message?.content;
