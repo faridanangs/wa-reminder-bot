@@ -5,6 +5,9 @@ const ai = new OpenAI({
   apiKey: process.env.AI_API_KEY,
 });
 
+const STATIC_DISCLAIMER =
+  "\n\n_EAI._";
+
 /**
  * Generate a single, friendly WhatsApp reminder message that bundles
  * all tasks due for a divisi today, instead of sending one message per task.
@@ -59,5 +62,5 @@ Balas HANYA dengan isi pesannya saja, tanpa preamble, tanpa penjelasan tambahan,
   });
 
   const text = response.choices[0]?.message?.content;
-  return text ? text.trim() : "";
+  return text ? text.trim() + STATIC_DISCLAIMER : "";
 }
