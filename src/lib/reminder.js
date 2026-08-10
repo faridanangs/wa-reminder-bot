@@ -41,11 +41,10 @@ export function getTodaysReminders(now = new Date()) {
   const grouped = {};
 
   for (const task of deadlines) {
-    const daysRemaining = daysBetween(todayStr, task.deadline_date);
-    // daysRemaining > 0  -> deadline masih di depan
-    // daysRemaining === 0 -> deadline hari ini
-    // daysRemaining < 0  -> deadline sudah lewat sejauh |daysRemaining| hari
+    
+    if (task.completed) continue;
 
+    const daysRemaining = daysBetween(todayStr, task.deadline_date);
     const withinStart = todayStr >= task.reminder_start_date;
     const withinGrace = daysRemaining >= -OVERDUE_GRACE_DAYS;
 

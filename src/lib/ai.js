@@ -32,6 +32,7 @@ Buat SATU pesan WhatsApp yang:
 - Menggabungkan semua deadline di atas jadi satu pesan (jangan dipisah)
 - Bahasa santai tapi tetap sopan dan jelas, gaya anak organisasi/panitia kampus Indonesia
 - Pakai emoji secukupnya, jangan berlebihan
+- Kalo ada nama PJ/PIC, sebutkan di pesan supaya mereka tahu tanggung jawabnya
 - Kalau ada deadline yang "HARI INI" atau "sudah lewat", beri penekanan/urgensi lebih tapi tetap positif dan memotivasi (jangan bikin orang merasa disalahkan)
 - Jangan terlalu panjang, maksimal sekitar 100-150 kata
 - Jangan pakai format markdown (**bold** dsb tidak akan tampil di WhatsApp, gunakan *bold* ala WhatsApp jika perlu)
