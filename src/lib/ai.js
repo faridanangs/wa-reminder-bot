@@ -5,15 +5,10 @@ const ai = new OpenAI({
   apiKey: process.env.AI_API_KEY,
 });
 
-// Ditempel manual (bukan digenerate AI) supaya kalimatnya selalu singkat & konsisten,
-// nggak ikut kena variasi gaya/panjang dari LLM tiap kali dipanggil.
-const STATIC_DISCLAIMER =
-  "\n\n_Ini reminder otomatis dari data checklist, kalau udah kelar tapi belum ke-update abaikan aja — bakal auto-stop maks 3 hari dari deadline._";
 /**
  * Generate a single, friendly WhatsApp reminder message that bundles
  * all tasks due for a divisi today, instead of sending one message per task.
  */
-
 export async function generateReminderText(divisi, tasks) {
   const taskList = tasks
     .map((t) => {
@@ -42,11 +37,11 @@ Tulis SATU pesan WhatsApp yang menggabungkan semua deadline di atas. Ikuti atura
 
 2. UNTUK TUGAS OVERDUE / DEADLINE HARI INI: Sampaikan dengan bingkai ajakan & solutif, JANGAN dengan nada menyalahkan atau mempertanyakan.
    - Hindari kalimat seperti "kenapa belum selesai", "kok belum dikerjain", "harusnya sudah kelar".
-   - Gunakan bingkai maju ke depan, contoh arah kalimat: ajak segera diselesaikan/dikebut, tawarkan bantuan, atau tanya kendala — tanpa menyudutkan siapa pun.
+   - Gunakan bingkai maju ke depan, contoh arah kalimat: ajak segera diselesaikan, tawarkan bantuan, atau tanya kendala — tanpa menyudutkan siapa pun.
 
 3. UNTUK PIC/PJ: Sebutkan nama sekadar sebagai info "siapa pegang tugas ini", bukan sebagai sorotan atau tekanan di depan grup. Jangan buat kalimat yang terkesan memanggil/nge-tag seseorang secara personal untuk diminta pertanggungjawaban. Cukup informatif, natural, dan tidak dramatis.
 
-4. JAGA PESAN TETAP RINGKAS DAN FOKUS. Pesan ini dibaca oleh seluruh anggota grup divisi, termasuk yang tidak terkait langsung ke tugas-tugas ini — jadi hindari kalimat panjang, pengulangan, atau nada urgent berlebihan yang bisa terasa mengganggu/spammy buat anggota lain. Maksimal sekitar 100-150 kata.
+4. JAGA PESAN TETAP RINGKAS DAN FOKUS. Pesan ini dibaca oleh seluruh anggota grup divisi, termasuk yang tidak terkait langsung ke tugas-tugas ini — jadi hindari kalimat panjang, pengulangan, atau nada urgent berlebihan yang bisa terasa mengganggu/spamm buat anggota lain. Maksimal sekitar 100-150 kata.
 
 5. Kalau ada kendala, cukup satu kalimat singkat yang membuka ruang diskusi di grup — tidak perlu dijelaskan panjang.
 
@@ -64,5 +59,5 @@ Balas HANYA dengan isi pesannya saja, tanpa preamble, tanpa penjelasan tambahan,
   });
 
   const text = response.choices[0]?.message?.content;
-  return text ? text.trim() + STATIC_DISCLAIMER : "";
+  return text ? text.trim() : "";
 }
