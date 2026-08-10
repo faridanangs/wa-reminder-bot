@@ -8,12 +8,12 @@ const ai = new OpenAI({
 // Ditempel manual (bukan digenerate AI) supaya kalimatnya selalu singkat & konsisten,
 // nggak ikut kena variasi gaya/panjang dari LLM tiap kali dipanggil.
 const STATIC_DISCLAIMER =
-  "\n\n_Catatan: ini reminder otomatis dari data checklist yang statis, jadi kalau tugas ini sebenarnya udah kelar tapi belum ke-update, santai aja diabaikan. Reminder ini juga bakal berhenti otomatis paling lama 3 hari ke depan kok._";
-
+  "\n\n_Ini reminder otomatis dari data checklist, kalau udah kelar tapi belum ke-update abaikan aja — bakal auto-stop maks 3 hari dari deadline._";
 /**
  * Generate a single, friendly WhatsApp reminder message that bundles
  * all tasks due for a divisi today, instead of sending one message per task.
  */
+
 export async function generateReminderText(divisi, tasks) {
   const taskList = tasks
     .map((t) => {
