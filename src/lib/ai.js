@@ -34,6 +34,7 @@ Buat SATU pesan WhatsApp yang:
 - Pakai emoji secukupnya, jangan berlebihan
 - Kalo ada nama PJ/PIC, sebutkan di pesan supaya mereka tahu tanggung jawabnya
 - Kalau ada deadline yang "HARI INI" atau "sudah lewat", beri penekanan/urgensi lebih tapi tetap positif dan memotivasi (jangan bikin orang merasa disalahkan)
+- Kalu ada kendala atau hal yang perlu dibahas, sarankan untuk diskusi di grup divisi
 - Jangan terlalu panjang, maksimal sekitar 100-150 kata
 - Jangan pakai format markdown (**bold** dsb tidak akan tampil di WhatsApp, gunakan *bold* ala WhatsApp jika perlu)
 - Tutup dengan kalimat yang encouraging, bukan menekan
