@@ -1,3 +1,4 @@
+// api/send-reminder
 import { NextResponse } from "next/server";
 import { getTodaysReminders } from "@/lib/reminder";
 import { generateReminderText } from "@/lib/ai";

@@ -254,7 +254,7 @@
     "deadline_date": "2026-08-10",
     "duration_days": 8,
     "reminder_start_date": "2026-08-04",
-    "completed": false,
+    "completed": true,
     "_note": "deadline diperpanjang (lihat pesan)"
   },
   {

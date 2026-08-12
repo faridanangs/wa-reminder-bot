@@ -1,4 +1,6 @@
 import { OpenAI } from "openai";
+import { GROUP_IDS } from "./groups";
+
 
 const ai = new OpenAI({
   baseURL: "https://api.groq.com/openai/v1",
@@ -63,4 +65,68 @@ Balas HANYA dengan isi pesannya saja, tanpa preamble, tanpa penjelasan tambahan,
 
   const text = response.choices[0]?.message?.content;
   return text ? text.trim() + STATIC_DISCLAIMER : "";
+}
+
+
+
+/**
+ * Parse a freeform WA scheduling command into structured data.
+ * Returns null if the message isn't a valid schedule command
+ * (missing divisi, unparseable time, dst).
+ */
+export async function parseScheduleCommand(rawText) {
+  const validDivisi = Object.keys(GROUP_IDS);
+
+  // Kasih AI referensi waktu "sekarang" dalam WITA supaya "besok jam 12 siang"
+  // bisa di-resolve dengan benar, bukan pakai UTC server.
+  const nowWITA = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Makassar",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(new Date());
+
+  const prompt = `Kamu adalah parser command untuk bot WhatsApp panitia. User mengirim pesan yang berisi perintah untuk menjadwalkan reminder ke grup divisi tertentu.
+
+Waktu sekarang (WITA): ${nowWITA}
+
+Divisi yang valid HANYA: ${validDivisi.join(", ")}
+
+Pesan dari user:
+"${rawText}"
+
+Ekstrak informasi berikut dan balas HANYA dengan JSON (tanpa markdown, tanpa penjelasan):
+{
+  "valid": boolean,           // false kalau bukan command penjadwalan, divisi tidak dikenali, atau waktu tidak jelas
+  "divisi": string | null,    // harus persis salah satu dari daftar valid di atas
+  "target_date": string|null, // format YYYY-MM-DD, dalam WITA
+  "target_time": string|null, // format HH:mm (24 jam), dalam WITA
+  "pesan": string | null      // isi pesan yang harus dikirim ke grup, tulis ulang jadi kalimat WA yang natural
+}`;
+
+  const response = await ai.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.1,
+    max_tokens: 300,
+    response_format: { type: "json_object" },
+  });
+
+  try {
+    const parsed = JSON.parse(response.choices[0]?.message?.content || "{}");
+    if (!parsed.valid || !parsed.divisi || !parsed.target_date || !parsed.target_time) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convert a WITA date+time string into a unix timestamp (seconds).
+ */
+export function toUnixTimestampWITA(dateStr, timeStr) {
+  // WITA = UTC+8, no DST.
+  const isoUTC = `${dateStr}T${timeStr}:00+08:00`;
+  return Math.floor(new Date(isoUTC).getTime() / 1000);
 }
