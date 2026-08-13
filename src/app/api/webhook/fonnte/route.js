@@ -1,14 +1,17 @@
-// webhook/fonte
 import { NextResponse } from "next/server";
 import { isSenderAllowed } from "@/lib/whitelist";
-import { parseScheduleCommand, toUnixTimestampWITA, generateReminderText } from "@/lib/ai";
+import {
+  parseScheduleCommand,
+  toUnixTimestampWITA,
+  generateReminderText,
+} from "@/lib/ai";
 import { sendToFonnte } from "@/lib/fonnte";
 import { GROUP_IDS } from "@/lib/groups";
 import { getTodaysReminders } from "@/lib/reminder"; // sesuaikan path kalau lokasi file lo beda
 
 export const maxDuration = 30;
 
-const TRIGGER_REGEX = /^(hello|hallo|halo|alo|allo|hey|pe|p|oy|oi)[\s,]*babu/i;
+const TRIGGER_REGEX = /^(hello|hallo|hay|oi|halo)[\s,]*babu/i;
 const MAX_TOTAL_SCHEDULES = 40;
 
 function sleep(ms) {
@@ -28,6 +31,42 @@ function isDuplicateEvent(key) {
   return false;
 }
 
+// Command cuma trigger doang (+ kata basa-basi kayak "tolong"/"dong") tanpa instruksi nyata
+// -> kirim panduan pemakaian, JANGAN dilempar ke AI classifier (hemat token, dan lebih
+// jelas buat user daripada balesan "aku nggak paham command-nya").
+const AFTER_TRIGGER_EMPTY_REGEX = /^[\s,.!]*(tolong|dong|please|woy|oi|ya)?[\s,.!]*$/i;
+
+function buildHelpText() {
+  const divisiList = Object.keys(GROUP_IDS).join(", ");
+  return `*Cara pakai bot ini* 🤖 (awali pesan dengan "hello babu" / "hallo babu" / "hay babu" / "oi babu")
+
+*1. Pesan custom ke divisi/grup:*
+"hello babu, ingetin divisi acara untuk surpey lokasi tempat acara workshopnya sekarang"
+"hello babu, besok jam 9 pagi ingetin divisi acara dan pdd untuk submit TOR"
+
+*2. Rangkuman deadline mepet (otomatis dari data tugas):*
+"hello babu, kirim deadline mepet buat humkes sekarang"
+"hello babu, jam 3 sore ingetin semua divisi soal deadline mepet"
+
+*3. Jam beda-beda per divisi dalam satu command:*
+"hay babu tolong ingetin divisi humkes terkait deadline yang mepet nanti jam 21:00 PM, divisi acara jam 21:02 PM, divisi pdd jam 21:02 PM, divisi konsum jam 21:03 PM, divisi perkam jam 21:04 PM"
+
+*4. Boleh campur deadline mepet & custom dalam satu command:*
+"hello babu, tolong ingetin divisi humkes terkait deadline yang mepet nanti jam 21:00 PM, divisi acara jam 21:02 PM, terus besok jam 3 sore ingetin panitia umum soal rapat mingguan"
+
+*5. Teks pesan sendiri persis (apit tanda kutip):*
+hello babu, kirim ke panitia umum besok jam 12 siang dengan pesan ini "isi pesan lo di sini"
+
+*6. Memiliki rentang waktu atau pesan yang berulang:*
+'oi babu, nanti rentang jam 21:00 - 21:08,  dan setiap 2 menit ingatkan grup panitia inti untuk rapat dan gunakan text ini "isi textnya"'
+'oi babu, mulai dari tgl 16 - 24 agustus setiap jam 12 siang kirim pesan ke grup panitia umum untuk membantu menyebar pamplet pendaftaran peserta'
+'oi babu, mulai dari tgl 16 - 24 agustus setiap jam 12 siang dan 2 hari sekali kirim pesan ke grup panitia umum untuk membantu menyebar pamplet pendaftaran peserta'
+
+Tambahin kata "sekarang" buat kirim langsung, atau kasih tanggal/jam buat dijadwalin.
+
+Grup yang tersedia: ${divisiList}`;
+}
+
 export async function POST(req) {
   let payload;
   try {
@@ -41,20 +80,9 @@ export async function POST(req) {
   const actualSender = payload.member || payload.sender;
   const replyTarget = payload.sender;
   const text = (payload.message || "").trim();
-  const nameSender = payload.name
 
   if (!actualSender || !isSenderAllowed(actualSender)) {
-    // PENTING: WAJIB di-await + di-catch. Ini dipanggil untuk SETIAP pesan dari
-    // sender yang belum whitelist (bukan cuma command bot), jadi kalau fetch ke
-    // Fonnte gagal (network blip/ECONNRESET) dan promise-nya dibiarkan "fire and
-    // forget" tanpa handler, itu jadi unhandled rejection yang bikin SELURUH
-    // proses Node crash -- bukan cuma request ini yang gagal.
-    await sendToFonnte(
-      replyTarget,
-      `sorry yeee ${nameSender}, yang bisa perintah aku cuman anggota paling inti😉`
-    ).catch((err) => {
-      console.error("gagal kirim balasan 'not allowed' ke", replyTarget, err);
-    });
+    console.log("ignored: sender not allowed ->", actualSender);
     return NextResponse.json({ ok: true, ignored: true });
   }
 
@@ -69,85 +97,94 @@ export async function POST(req) {
     return NextResponse.json({ ok: true, ignored: true, duplicate: true });
   }
 
+  const afterTrigger = text.replace(TRIGGER_REGEX, "");
+  if (AFTER_TRIGGER_EMPTY_REGEX.test(afterTrigger)) {
+    await sendToFonnte(replyTarget, buildHelpText()).catch(() => {});
+    return NextResponse.json({ ok: true, help: true });
+  }
+
   try {
     const parsed = await parseScheduleCommand(text);
     if (!parsed) {
       await sendToFonnte(
         replyTarget,
-        "Waduh, aku nggak paham maksud command-nya 🙏 Coba format: 'hello bot, ingetin [divisi] [tanggal/hari] jam [waktu] buat [tugas]', tambahin 'sekarang' buat kirim langsung, atau 'hello bot kirim/ingetin deadline mepet untuk [divisi] [jam/tanggal opsional]'."
+        "Waduh, aku nggak paham maksud command-nya 🙏 Ketik 'hello babu' aja (tanpa instruksi lain) buat liat panduan pemakaian."
       );
       return NextResponse.json({ ok: true, parsed: false });
     }
 
-    const { intent, send_now, schedules, pesan } = parsed;
+    const { send_now, schedules } = parsed;
 
-    // Gabungin semua divisi yang muncul di seluruh assignment -- dipakai buat validasi grup
-    // dan generate pesan sekali per divisi (bukan per assignment, biar gak digenerate dobel).
     const unionDivisi = [...new Set(schedules.flatMap((s) => s.divisi))];
-
     const missingGroup = unionDivisi.find((d) => !GROUP_IDS[d]);
     if (missingGroup) {
       await sendToFonnte(replyTarget, `Divisi "${missingGroup}" nggak ketemu di daftar grup 🙏`);
       return NextResponse.json({ ok: true, error: "unknown divisi" });
     }
 
-    const divisiLabel =
-      unionDivisi.length === Object.keys(GROUP_IDS).length ? "semua divisi" : unionDivisi.join(", ");
+    // Generate teks deadline_mepet sekali per divisi (bukan per assignment), biar gak
+    // manggil AI dobel kalau divisi yang sama kebetulan muncul di >1 assignment.
+    const deadlineMepetDivisi = [
+      ...new Set(schedules.filter((s) => s.intent === "deadline_mepet").flatMap((s) => s.divisi)),
+    ];
+    const deadlineMepetMessage = {}; // divisi -> string | null
+    const genErrors = {}; // divisi -> error string
 
-    // Resolve isi pesan per divisi.
-    // "custom" → semua divisi pakai pesan yang sama (dari user).
-    // "deadline_mepet" → tiap divisi punya pesan sendiri, disusun AI dari data
-    // tugas SAAT COMMAND DIPROSES. Kalau dijadwalkan, isi pesan tetap dari data
-    // sekarang, bukan data pada saat pesan benar-benar terkirim nanti.
-    const messageByDivisi = {}; // divisi -> string | null (null = skip, tidak ada deadline mepet)
-    const genErrors = {};       // divisi -> error string
-
-    if (intent === "custom") {
-      for (const divisi of unionDivisi) messageByDivisi[divisi] = pesan;
-    } else {
+    if (deadlineMepetDivisi.length > 0) {
       const remindersByDivisi = getTodaysReminders();
-      for (const divisi of unionDivisi) {
+      for (const divisi of deadlineMepetDivisi) {
         const tasks = remindersByDivisi[divisi] || [];
         if (tasks.length === 0) {
-          messageByDivisi[divisi] = null;
+          deadlineMepetMessage[divisi] = null;
           continue;
         }
         try {
-          messageByDivisi[divisi] = await generateReminderText(divisi, tasks);
+          deadlineMepetMessage[divisi] = await generateReminderText(divisi, tasks);
         } catch (err) {
           console.error("generateReminderText failed:", divisi, err);
           genErrors[divisi] = String(err);
         }
-        await sleep(150); // jaga rate limit Groq kalau divisi yang diminta banyak
+        await sleep(150);
       }
     }
 
-    const skippedDivisi = unionDivisi.filter((d) => messageByDivisi[d] === null);
-    const failedGenDivisi = Object.keys(genErrors);
-    const sendableDivisi = new Set(unionDivisi.filter((d) => messageByDivisi[d]));
-
-    if (sendableDivisi.size === 0) {
-      let msg =
-        intent === "deadline_mepet"
-          ? "Nggak ada deadline yang mepet buat divisi yang diminta 👍"
-          : "Nggak ada divisi yang bisa diproses 🙏";
-      if (failedGenDivisi.length > 0) {
-        msg += `\n\n⚠️ Gagal nyusun pesan buat: ${failedGenDivisi.join(", ")}, coba lagi.`;
+    // Ratakan tiap assignment jadi entry per-divisi dengan pesan sudah di-resolve
+    // (custom -> pesan dari assignment; deadline_mepet -> hasil generate di atas).
+    const entries = [];
+    for (const s of schedules) {
+      for (const divisi of s.divisi) {
+        const message = s.intent === "custom" ? s.pesan : deadlineMepetMessage[divisi];
+        entries.push({ divisi, intent: s.intent, message, target_dates: s.target_dates, target_times: s.target_times });
       }
+    }
+
+    const sendableEntries = entries.filter((e) => e.message);
+    const skippedDivisi = [
+      ...new Set(entries.filter((e) => !e.message && e.intent === "deadline_mepet").map((e) => e.divisi)),
+    ];
+    const failedGenDivisi = Object.keys(genErrors);
+
+    if (sendableEntries.length === 0) {
+      let msg = "Nggak ada yang bisa diproses 🙏";
+      if (skippedDivisi.length > 0) msg += `\n\nGak ada deadline mepet buat: ${skippedDivisi.join(", ")}.`;
+      if (failedGenDivisi.length > 0) msg += `\n\n⚠️ Gagal nyusun pesan buat: ${failedGenDivisi.join(", ")}, coba lagi.`;
       await sendToFonnte(replyTarget, msg);
-      return NextResponse.json({ ok: true, intent, skipped: skippedDivisi, failed_generation: failedGenDivisi });
+      return NextResponse.json({ ok: true, skipped: skippedDivisi, failed_generation: failedGenDivisi });
     }
 
     // --- Kirim langsung sekarang, tanpa schedule ---
     if (send_now) {
       const results = [];
-      for (const divisi of sendableDivisi) {
+      const sentDivisi = new Set();
+      for (const e of sendableEntries) {
+        if (sentDivisi.has(e.divisi)) continue; // hindari kirim dobel kalau divisi sama muncul di >1 assignment
+        sentDivisi.add(e.divisi);
         try {
-          const result = await sendToFonnte(GROUP_IDS[divisi], messageByDivisi[divisi]);
-          results.push({ divisi, ok: true, result });
+          const result = await sendToFonnte(GROUP_IDS[e.divisi], e.message);
+          results.push({ divisi: e.divisi, ok: true, result });
         } catch (err) {
-          console.error("send-now job failed:", divisi, err);
-          results.push({ divisi, ok: false, error: String(err) });
+          console.error("send-now job failed:", e.divisi, err);
+          results.push({ divisi: e.divisi, ok: false, error: String(err) });
         }
         await sleep(250);
       }
@@ -156,42 +193,32 @@ export async function POST(req) {
       const failCount = results.length - successCount;
       const sentLabel = results.filter((r) => r.ok).map((r) => r.divisi).join(", ") || "-";
 
-      let confirmText =
-        intent === "deadline_mepet"
-          ? `Siap tuan, rangkuman deadline mepet udah dikirim ke: *${sentLabel}* ✅`
-          : `Siap tuan, pesan buat *${divisiLabel}* udah dikirim sekarang ✅`;
-
+      let confirmText = `Siap tuan, pesan udah dikirim ke: *${sentLabel}* ✅`;
       if (skippedDivisi.length > 0) confirmText += `\n\nGak ada deadline mepet buat: ${skippedDivisi.join(", ")}.`;
       if (failedGenDivisi.length > 0) confirmText += `\n\n⚠️ Gagal nyusun pesan buat: ${failedGenDivisi.join(", ")}.`;
       if (failCount > 0) confirmText += `\n\n⚠️ ${failCount} grup gagal dikirim, coba ulangi command-nya.`;
 
       await sendToFonnte(replyTarget, confirmText);
-      return NextResponse.json({ ok: true, intent, sent_now: successCount, failed: failCount, jobs: results });
+      return NextResponse.json({ ok: true, sent_now: successCount, failed: failCount, jobs: results });
     }
 
-    // --- Terjadwal: tiap assignment (schedules[i]) punya divisi x tanggal x jam SENDIRI.
-    // TIDAK cartesian-product lintas assignment -- itu penyebab bug lama (semua divisi
-    // ketimpa jam divisi lain).
+    // --- Terjadwal ---
     const nowSec = Math.floor(Date.now() / 1000);
     const seen = new Set();
     const jobs = [];
-    for (const { divisi: blockDivisi, target_dates: dates, target_times: times } of schedules) {
-      for (const divisi of blockDivisi) {
-        if (!sendableDivisi.has(divisi)) continue; // skip divisi yang emang gak ada yang perlu diingetin
-        for (const date of dates) {
-          for (const time of times) {
-            const schedule = toUnixTimestampWITA(date, time);
-            if (schedule <= nowSec) continue;
+    for (const e of sendableEntries) {
+      for (const date of e.target_dates) {
+        for (const time of e.target_times) {
+          const schedule = toUnixTimestampWITA(date, time);
+          if (schedule <= nowSec) continue;
 
-            // Dedupe key WAJIB pakai nama divisi, BUKAN groupId -- di dev, beberapa divisi
-            // sengaja diarahkan ke satu grup test yang sama (lib/groups.js), jadi groupId
-            // doang gak cukup buat bedain job antar divisi (ini yang bikin job "ketelen").
-            const dedupeKey = `${divisi}|${schedule}`;
-            if (seen.has(dedupeKey)) continue;
-            seen.add(dedupeKey);
+          // Dedupe key pakai nama divisi (bukan groupId) -- di dev, beberapa divisi
+          // sengaja diarahkan ke satu grup test yang sama (lihat lib/groups.js).
+          const dedupeKey = `${e.divisi}|${schedule}`;
+          if (seen.has(dedupeKey)) continue;
+          seen.add(dedupeKey);
 
-            jobs.push({ divisi, date, time, schedule, groupId: GROUP_IDS[divisi], pesan: messageByDivisi[divisi] });
-          }
+          jobs.push({ divisi: e.divisi, date, time, schedule, groupId: GROUP_IDS[e.divisi], pesan: e.message });
         }
       }
     }
@@ -224,7 +251,6 @@ export async function POST(req) {
     const successCount = results.filter((r) => r.ok).length;
     const failCount = results.length - successCount;
 
-    // Ringkasan per divisi, biar akurat walau tiap divisi punya jam beda-beda.
     const scheduledByDivisi = {};
     for (const job of results.filter((r) => r.ok)) {
       if (!scheduledByDivisi[job.divisi]) scheduledByDivisi[job.divisi] = [];
@@ -234,18 +260,14 @@ export async function POST(req) {
       .map(([divisi, times]) => `• ${divisi}: ${times.join(", ")} WITA`)
       .join("\n");
 
-    let confirmText =
-      intent === "deadline_mepet"
-        ? `Siap tuan, ${successCount} reminder rangkuman deadline mepet udah dijadwalin:\n${scheduleLines}`
-        : `Siap tuan, ${successCount} reminder udah dijadwalin:\n${scheduleLines}`;
-
+    let confirmText = `Siap tuan, ${successCount} reminder udah dijadwalin:\n${scheduleLines}`;
     if (skippedDivisi.length > 0) confirmText += `\n\nGak ada deadline mepet buat: ${skippedDivisi.join(", ")}.`;
     if (failedGenDivisi.length > 0) confirmText += `\n\n⚠️ Gagal nyusun pesan buat: ${failedGenDivisi.join(", ")}.`;
     if (failCount > 0) confirmText += `\n\n⚠️ ${failCount} reminder gagal dijadwalin, coba ulangi command-nya.`;
 
     await sendToFonnte(replyTarget, confirmText);
 
-    return NextResponse.json({ ok: true, intent, scheduled: successCount, failed: failCount, jobs: results });
+    return NextResponse.json({ ok: true, scheduled: successCount, failed: failCount, jobs: results });
   } catch (err) {
     console.error("schedule command error:", err);
     await sendToFonnte(replyTarget, "Waduh, ada error pas proses command-nya, coba lagi bentar ya 🙏").catch(() => {});

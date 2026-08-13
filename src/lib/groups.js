@@ -3,14 +3,22 @@
 const USE_TEST_GROUP = true;
 
 const PRODUCTION_GROUP_IDS = {
-  Humkes: "120363425848765391@g.us",
-  Perkam: "120363409780546177@g.us",
-  Konsumsi: "120363428149058688@g.us",
-  Acara: "120363425462901731@g.us",
-  PDD: "120363426269393564@g.us",
-  "Panitia Inti": "120363426942319380@g.us",
-  "Panitia Umum": "120363411110781619@g.us",
-  "Inti Kece": "120363427718026519@g.us",
+  Humkes: "",
+  Perkam: "",
+  Konsumsi: "",
+  Acara: "",
+  PDD: "",
+  "Panitia Inti": "",
+  "Panitia Umum": "",
+  "Inti Kece": "",
+  // Humkes: "120363425848765391@g.us",
+  // Perkam: "120363409780546177@g.us",
+  // Konsumsi: "120363428149058688@g.us",
+  // Acara: "120363425462901731@g.us",
+  // PDD: "120363426269393564@g.us",
+  // "Panitia Inti": "120363426942319380@g.us",
+  // "Panitia Umum": "120363411110781619@g.us",
+  // "Inti Kece": "120363427718026519@g.us",
 };
 
 const TEST_GROUP_ID = "120363432331143179@g.us";

@@ -66,17 +66,8 @@ Balas HANYA dengan isi pesannya saja, tanpa preamble, tanpa penjelasan tambahan,
 
 /**
  * Cari blok teks yang diapit tanda kutip di command mentah user.
- *
- * PENTING: ini murni regex, TIDAK lewat LLM sama sekali. Tujuannya supaya kalau
- * user kasih teks literal (mis. "gunakan text ini \"...\""), isinya BENAR-BENAR
- * disalin byte-per-byte -- termasuk emoji, markdown WhatsApp (*bold*, _italic_),
- * dan line break -- tanpa risiko "ditulis ulang" oleh model generatif.
- *
- * Support tanda kutip lurus ("...") dan smart quotes ("...") yang kadang muncul
- * dari auto-correct keyboard HP. Greedy match -> ambil dari kutip PERTAMA sampai
- * kutip TERAKHIR (asumsi: cuma ada satu blok pesan literal per command).
- *
- * Return null kalau tidak ketemu kutipan.
+ * Murni regex, TIDAK lewat LLM -- supaya teks literal disalin byte-per-byte,
+ * termasuk emoji, markdown WhatsApp, dan line break.
  */
 function extractQuotedLiteral(rawText) {
   const straight = rawText.match(/"([\s\S]+)"/);
@@ -89,32 +80,31 @@ function extractQuotedLiteral(rawText) {
 }
 
 /**
- * Classifier + parser. Dua intent, DUA-DUANYA bisa send_now ATAU dijadwalkan:
+ * Classifier + parser. SATU command bisa punya BEBERAPA "assignment"
+ * (kelompok divisi+jadwal+intent), dan tiap assignment BEBAS punya intent
+ * sendiri -- "custom" atau "deadline_mepet" -- jadi satu command BOLEH
+ * campur keduanya (misal: "humkes jam 1 soal deadline mepet, terus jam 3
+ * ingetin panitia umum soal rapat").
  *
- * - "custom": isi pesan ditentukan user sendiri (atau disusun ulang AI dari command).
- * - "deadline_mepet": isi pesan disusun otomatis dari data tugas per divisi
- *   (pesan = null di sini, di-generate belakangan oleh generateReminderText).
- *
- * Satu command bisa punya BEBERAPA "assignment" (kelompok divisi+tanggal+jam) --
- * misal "humkes jam 1, acara jam 2" jadi DUA assignment terpisah, masing-masing
- * dengan target_dates/target_times sendiri. Ini supaya tiap divisi dijadwalkan
- * di jam yang benar-benar dimaksud, bukan cartesian product semua divisi x semua jam.
- *
- * Return: { intent, send_now, schedules: [{ divisi: string[], target_dates: string[], target_times: string[] }], pesan }
- * atau null kalau command tidak valid.
+ * Return:
+ * {
+ *   send_now: boolean,
+ *   schedules: [{
+ *     intent: "custom" | "deadline_mepet",
+ *     divisi: string[],
+ *     target_dates: string[],   // [] kalau send_now
+ *     target_times: string[],   // [] kalau send_now
+ *     pesan: string | null,     // isi wajib kalau intent "custom", null kalau "deadline_mepet"
+ *   }]
+ * }
+ * atau null kalau command tidak valid/tidak dikenali.
  */
 export async function parseScheduleCommand(rawText) {
   const validDivisi = Object.keys(GROUP_IDS);
   const now = new Date();
 
-  // Tangkap teks literal (kalau ada) SEBELUM apapun dikirim ke LLM. Ini yang
-  // dipakai sebagai `pesan` final nanti -- dijamin identik dengan input user.
   const quoted = extractQuotedLiteral(rawText);
   const literalPesan = quoted ? quoted.content : null;
-
-  // Ganti blok yang dikutip dengan placeholder supaya classifier tetap bisa baca
-  // instruksi divisi/jadwal di sekitarnya, TANPA perlu "menyalin ulang" isi pesan
-  // (menghindari model iseng meringkas/parafrase teks panjang di dalam prompt).
   const textForAI = quoted ? rawText.replace(quoted.fullMatch, "[PESAN_LITERAL]") : rawText;
 
   const nowWITA = new Intl.DateTimeFormat("en-CA", {
@@ -128,11 +118,13 @@ export async function parseScheduleCommand(rawText) {
     weekday: "long",
   }).format(now);
 
-  const prompt = `Kamu adalah classifier + parser command untuk bot WhatsApp panitia. Ada DUA jenis command:
+  const prompt = `Kamu adalah classifier + parser command untuk bot WhatsApp panitia. User bisa minta SATU ATAU LEBIH hal sekaligus dalam satu pesan -- tiap permintaan jadi satu "assignment" dengan intent-nya SENDIRI:
 
-A) intent "custom" — user nentuin sendiri isi pesan, target divisi, dan kapan dikirim (sekarang, atau dijadwalkan buat nanti).
+A) intent "custom" — isi pesan, target divisi, dan kapan dikirim ditentukan user sendiri.
 
-B) intent "deadline_mepet" — user minta bot ngirim rangkuman deadline yang MEPET/DEKET/HAMPIR JATUH TEMPO buat divisi tertentu (kata kunci semacam "deadline mepet", "deadline yang deket", "kasih tau soal deadline"), TANPA nentuin isi pesan sendiri — pesan disusun otomatis dari data tugas. Intent ini JUGA BISA dikirim sekarang ATAU dijadwalkan buat nanti, PERSIS sama aturannya kayak intent "custom".
+B) intent "deadline_mepet" — rangkuman deadline yang MEPET/DEKET/HAMPIR JATUH TEMPO buat divisi tertentu (kata kunci semacam "deadline mepet", "deadline yang deket", "kasih tau soal deadline"), TANPA isi pesan dari user -- pesan disusun otomatis dari data tugas oleh sistem, bukan tugas kamu.
+
+PENTING: SATU command BOLEH campur kedua intent di assignment yang berbeda. Contoh: "humkes jam 1 soal deadline mepet, terus jam 3 ingetin panitia umum soal rapat" -> assignment pertama intent "deadline_mepet" buat Humkes jam 13:00, assignment kedua intent "custom" buat Panitia Umum jam 15:00 dengan pesan soal rapat. JANGAN paksa semua assignment pakai intent yang sama kalau usernya jelas minta dua hal berbeda.
 
 Waktu sekarang (WITA): ${nowWITA}, hari ${nowDayNameWITA}.
 
@@ -142,108 +134,95 @@ Pesan dari user:
 "${textForAI}"
 
 CATATAN KHUSUS soal placeholder [PESAN_LITERAL] (kalau muncul di pesan user di atas):
-- Itu artinya user SUDAH nulis pesan final sendiri di command aslinya (sudah ditandai kutip), dan pesan itu WAJIB dipakai APA ADANYA -- kamu TIDAK PERLU dan TIDAK BOLEH menyusun ulang isinya.
-- Kalau [PESAN_LITERAL] muncul -> intent WAJIB "custom", dan field "pesan" di output cukup isi string "[PESAN_LITERAL]" saja (nanti akan digantikan otomatis oleh sistem dengan teks aslinya, bukan tugas kamu).
-- Fokus kamu tetap cuma nentuin divisi, send_now, dan tanggal/jam dari sisa instruksi di command (di luar bagian [PESAN_LITERAL]).
+- Itu artinya user SUDAH nulis pesan final sendiri di command aslinya (ditandai kutip), dan pesan itu WAJIB dipakai APA ADANYA -- kamu TIDAK PERLU dan TIDAK BOLEH menyusun ulang isinya.
+- Assignment yang berkaitan dengan [PESAN_LITERAL] WAJIB intent "custom", dan field "pesan"-nya cukup isi string "[PESAN_LITERAL]" saja (nanti digantikan otomatis oleh sistem, bukan tugas kamu).
+- Fokus kamu tetap cuma nentuin divisi, jadwal, dan assignment lain (kalau ada) dari sisa instruksi di command.
 
-PENTING — SATU COMMAND BISA PUNYA BEBERAPA "ASSIGNMENT" (kelompok divisi+tanggal+jam):
-- Kalau beberapa divisi disebut dan SEMUANYA pakai tanggal/jam yang SAMA -> itu SATU assignment, divisi-divisinya digabung dalam satu array.
-- Kalau tiap divisi (atau tiap kelompok divisi) punya tanggal/jam BEDA-BEDA (misal "humkes jam 1, acara jam 2, pdd jam 3") -> WAJIB dipecah jadi assignment TERPISAH per kelompok. JANGAN digabung jadi satu array divisi besar dengan satu array times besar -- itu bakal bikin SETIAP divisi dijadwalkan di SEMUA jam, bukan cuma jam yang dimaksud buat divisi itu.
-- Satu assignment TIDAK PERNAH menggabungkan dua divisi yang tanggal/jamnya berbeda.
+PENTING — SATU COMMAND BISA PUNYA BEBERAPA "ASSIGNMENT" (kelompok intent+divisi+tanggal+jam):
+- Kalau beberapa divisi disebut, SEMUA pakai tanggal/jam SAMA, DAN intent-nya SAMA -> itu SATU assignment, divisi-divisinya digabung dalam satu array.
+- Kalau tiap divisi (atau kelompok divisi) punya tanggal/jam BEDA, ATAU intent-nya BEDA (custom vs deadline_mepet) -> WAJIB dipecah jadi assignment TERPISAH. JANGAN digabung jadi satu array besar -- itu bakal bikin jadwal/intent yang salah ke divisi yang salah.
 
-ATURAN KHUSUS PASANGAN BERURUTAN (kalau divisi & jam disebut sebagai DUA LIST SEJAJAR dalam satu kalimat, misal "jam A dan jam B kirim ke divisi X dan Y"):
-- Kalau ada N divisi disebut berurutan (dipisah "dan"/koma) DAN ada N jam disebut berurutan (dipisah "dan"/koma) dengan N SAMA PERSIS di kedua list, DAN TIDAK ADA kata yang menandakan semua divisi dapat SEMUA jam yang sama (seperti "keduanya", "semuanya di jam yang sama", "masing-masing di jam-jam itu") -> ARTINYA PASANGAN BERURUTAN 1-ke-1 berdasarkan urutan penyebutan di tiap list (divisi urutan ke-i berpasangan dengan jam urutan ke-i), TIDAK PEDULI list jam disebut sebelum atau sesudah list divisi di kalimat. WAJIB dipecah jadi N assignment terpisah, masing-masing cuma 1 divisi + 1 jam itu.
-- Kalau jumlah divisi dan jumlah jam TIDAK sama, ATAU ada kata yang menandakan semua dapat jam yang sama -> BUKAN pasangan, pakai aturan assignment biasa (semua divisi digabung satu assignment, semua jam jadi array target_times assignment itu -- tiap divisi dapat SEMUA jam itu).
+ATURAN KHUSUS PASANGAN BERURUTAN (kalau divisi & jam disebut sebagai DUA LIST SEJAJAR, misal "jam A dan jam B kirim ke divisi X dan Y"):
+- Kalau ada N divisi disebut berurutan (dipisah "dan"/koma) DAN ada N jam disebut berurutan dengan N SAMA PERSIS di kedua list, DAN TIDAK ADA kata yang menandakan semua divisi dapat SEMUA jam yang sama (seperti "keduanya", "semuanya di jam yang sama") -> ARTINYA PASANGAN BERURUTAN 1-ke-1 berdasarkan urutan penyebutan (divisi ke-i berpasangan dengan jam ke-i), TIDAK PEDULI list jam disebut sebelum atau sesudah list divisi. WAJIB dipecah jadi N assignment terpisah.
+- Kalau jumlah divisi dan jam TIDAK sama, ATAU ada kata yang menandakan semua dapat jam yang sama -> BUKAN pasangan, satu assignment dengan semua divisi + semua jam (tiap divisi dapat SEMUA jam itu).
 
-Contoh PASANGAN (2 divisi, 2 jam, sejajar, asumsi hari ini "2026-08-13"):
-Command: "jam 2:15 dan jam 2:16 kirim ke divisi perkam dan konsum"
+Contoh PASANGAN (2 divisi, 2 jam, sejajar, intent sama, asumsi hari ini "2026-08-13"):
+Command: "jam 2:15 dan jam 2:16 kirim ke divisi perkam dan konsum, isinya cek logistik"
 assignments: [
-  { "divisi": ["Perkam"], "target_dates": ["2026-08-13"], "target_times": ["14:15"] },
-  { "divisi": ["Konsumsi"], "target_dates": ["2026-08-13"], "target_times": ["14:16"] }
+  { "intent": "custom", "divisi": ["Perkam"], "target_dates": ["2026-08-13"], "target_times": ["14:15"], "pesan": "Halo, teman-teman divisi Perkam! 👋 Yuk dicek logistiknya ya, biar persiapannya makin matang 🙏" },
+  { "intent": "custom", "divisi": ["Konsumsi"], "target_dates": ["2026-08-13"], "target_times": ["14:16"], "pesan": "Halo, teman-teman divisi Konsumsi! 👋 Yuk dicek logistiknya ya, biar persiapannya makin matang 🙏" }
+]
+
+Contoh CAMPUR INTENT (asumsi hari ini "2026-08-13"):
+Command: "humkes jam 1 soal deadline mepet, terus jam 3 ingetin panitia umum soal rapat evaluasi"
+assignments: [
+  { "intent": "deadline_mepet", "divisi": ["Humkes"], "target_dates": ["2026-08-13"], "target_times": ["13:00"], "pesan": null },
+  { "intent": "custom", "divisi": ["Panitia Umum"], "target_dates": ["2026-08-13"], "target_times": ["15:00"], "pesan": "Halo, teman-teman Panitia Umum! 👋 Ada rapat evaluasi yang perlu diingetin nih, jangan lupa hadir ya. Kalau ada kendala boleh diomongin di sini 🙏" }
 ]
 
 Contoh BUKAN pasangan (ada kata "keduanya" -> shared time, tetap satu assignment):
-Command: "acara dan pdd besok jam 9 dan jam 2, keduanya dapat kedua jam itu"
+Command: "acara dan pdd besok jam 9 dan jam 2, keduanya dapat kedua jam itu, soal deadline mepet"
 assignments: [
-  { "divisi": ["Acara", "PDD"], "target_dates": ["2026-08-14"], "target_times": ["09:00", "14:00"] }
+  { "intent": "deadline_mepet", "divisi": ["Acara", "PDD"], "target_dates": ["2026-08-14"], "target_times": ["09:00", "14:00"], "pesan": null }
 ]
 
-ATURAN UMUM (berlaku untuk kedua intent, per assignment):
-- DIVISI — cocokkan nama yang disebut user (termasuk singkatan/typo/tidak lengkap, misal "konsum" → "Konsumsi", "acr"/"acara" → "Acara") ke SALAH SATU nama persis di daftar valid, case-insensitive. "semua divisi"/"seluruh divisi" → string literal "ALL" (khusus kalau memang SEMUA divisi dapat tanggal/jam yang sama). Kalau benar-benar tidak bisa dicocokkan ke satu pun nama valid → valid: false.
-- send_now — true kalau user minta dikirim SEKARANG/LANGSUNG/SAAT INI JUGA tanpa nyebut tanggal/jam target, berlaku untuk SELURUH command. false kalau ADA tanggal/jam spesifik disebut buat nanti (termasuk kata "nanti jam ..." — itu berarti dijadwalkan, BUKAN sekarang).
+Contoh INTERVAL TANGGAL (asumsi hari ini "2026-08-13"):
+Command: "hello babu, mulai dari tgl 16-24 agustus setiap jam 12 siang dan setiap 2 hari ingatkan grup panitia umum untuk sebar pamflet pendaftaran"
+assignments: [
+  { "intent": "custom", "divisi": ["Panitia Umum"], "target_dates": ["2026-08-16","2026-08-18","2026-08-20","2026-08-22","2026-08-24"], "target_times": ["12:00"], "pesan": "Halo, Panitia Umum! 👋 Mulai tanggal 16 sampai 24 Agustus, yuk bantu sebar pamflet pendaftaran peserta ya. Makasih buat yang udah gerak duluan! 🙏" }
+]
+
+ATURAN UMUM (berlaku untuk semua assignment):
+- DIVISI — cocokkan nama yang disebut user (termasuk singkatan/typo/tidak lengkap, misal "konsum" → "Konsumsi", "acr"/"acara" → "Acara") ke SALAH SATU nama persis di daftar valid, case-insensitive. "semua divisi"/"seluruh divisi" → string literal "ALL" (khusus kalau memang SEMUA divisi dapat perlakuan sama). Kalau tidak bisa dicocokkan ke satu pun nama valid → valid: false.
+- send_now — berlaku untuk SELURUH command (bukan per-assignment): true kalau user minta dikirim SEKARANG/LANGSUNG/SAAT INI JUGA tanpa nyebut tanggal/jam. false kalau ADA tanggal/jam spesifik disebut buat nanti (termasuk "nanti jam ..." — itu berarti dijadwalkan, BUKAN sekarang).
+  - PENGECUALIAN PENTING (baca teliti): kalau user menyebut kata "sekarang"/"langsung"/"saat ini juga" DAN semua jam yang disebutkan di command ini ada DALAM RADIUS ±10 MENIT dari waktu sekarang (${nowWITA}) -> jam itu BUKAN instruksi jadwal, itu cuma user nyebutin "jam segini nih sekarang" sebagai konteks/timestamp. WAJIB set send_now: true, dan ABAIKAN jam tsb sebagai target_time (assignment terkait cukup isi target_dates/target_times array kosong []).
+    Contoh: waktu sekarang 08:31, command "sekarang ingetin Humkes jam 8:33 soal deadline mepet" -> send_now: true (8:33 cuma 2 menit dari sekarang, itu referensi "saat ini", BUKAN jadwal buat besok/nanti).
+  - Kalau jam yang disebut jaraknya JAUH dari waktu sekarang (lebih dari ±10 menit, baik lebih cepat maupun lebih lambat) -> itu TETAP instruksi jadwal beneran (send_now: false) meskipun ada kata "sekarang" di command (kata "sekarang" di kasus ini biasanya cuma basa-basi pembuka kalimat, bukan penentu waktu kirim) -- ikuti aturan target_dates/target_times normal di bawah.
+  - Jam yang disebut sebagai bagian dari ISI PESAN (misal "rapat evaluasi jam 4 sore besok" -- itu jam acara/rapatnya, BUKAN jam kapan reminder ini harus dikirim) TIDAK dihitung dalam pengecualian ini dan TIDAK jadi target_time -- itu cuma konten pesan biasa.
 - Kalau send_now: true → target_dates dan target_times tiap assignment boleh array kosong [].
 - Kalau send_now: false → tiap assignment WAJIB isi target_dates & target_times:
-  - target_dates: array tanggal konkret YYYY-MM-DD, urut menaik, mencakup SEMUA hari yang dimaksud untuk assignment itu (bukan cuma awal & akhir):
-    - Satu hari saja / tidak disebut tanggal tapi ada jam (misal "nanti jam 12:53", "besok") → array isi 1 tanggal (hari ini kalau jamnya belum lewat, besok kalau sudah lewat, atau sesuai kata "besok"/"hari ini" yang eksplisit).
-    - Rentang nama hari (misal "besok senin sampai rabu") → cari kemunculan hari itu PERTAMA yang jatuh pada/setelah besok, isi semua tanggal berurutan sampai hari akhir.
-    - Rentang tanggal eksplisit (misal "tgl 25-30 agustus") → semua tanggal inklusif, tahun berjalan kalau tidak disebut.
-    - Ambigu total → valid: false.
-  - target_times: array jam HH:mm (24 jam), urut menaik, SEMUA jam yang disebut untuk assignment itu (bisa lebih dari satu, dipisah "dan"/koma/"&"). Konversi format 12 jam (AM/PM) ke 24 jam.
+  - target_dates: array YYYY-MM-DD, urut menaik, mencakup SEMUA hari yang dimaksud (bukan cuma awal & akhir). Satu hari/tidak disebut tanggal tapi ada jam → 1 tanggal (hari ini kalau jam belum lewat, besok kalau sudah lewat, atau sesuai kata "besok"/"hari ini" eksplisit). Rentang nama hari → cari kemunculan hari itu PERTAMA pada/setelah besok sampai hari akhir. Rentang tanggal eksplisit → semua tanggal inklusif. Kalau rentang tanggal itu DISERTAI kata "setiap N hari"/"tiap N hari" (interval) → JANGAN ambil semua tanggal inklusif, tapi LOMPAT per N hari mulai dari tanggal awal (tanggal awal WAJIB ikut), lanjut +N, +2N, dst, selama TIDAK MELEWATI tanggal akhir (kalau lompatan pas kena tanggal akhir, ikut disertakan; kalau lompatan berikutnya lewat dari tanggal akhir, berhenti sebelum itu). Ambigu total → valid: false.
+  - target_times: array HH:mm (24 jam), urut menaik, semua jam yang disebut untuk assignment itu. Konversi format 12 jam (AM/PM) ke 24 jam.
 
-ATURAN KHUSUS intent "custom" — pesan (SATU pesan berlaku untuk SEMUA assignment dalam command ini):
-- Susun SATU pesan WhatsApp LENGKAP yang siap dikirim ke grup divisi, berdiri sendiri (orang yang belum baca command aslinya harus tetap paham maksudnya) — JANGAN cuma menyalin potongan/ekor kalimat dari command mentah-mentah.
-- Kalau ada placeholder [PESAN_LITERAL] → ikuti CATATAN KHUSUS di atas (isi "pesan" cukup "[PESAN_LITERAL]", skip aturan di bawah).
-- Kalau TIDAK ada placeholder, susun dengan struktur:
-  1) Sapaan hangat ke divisi/panitia terkait, misal "Halo, teman-teman divisi Konsumsi! 👋" atau "Halo, teman-teman panitia umum! 👋", tergantung konteknya oke, kalo panitia inti ya sapa panitia inti, dll
-  2) Kalimat jelas & lengkap soal apa yang perlu dilakukan (dari isi command, tulis ulang natural, perbaiki typo, JANGAN dipotong jadi fragmen).
-  3) Nada ramah tapi tegas — jelas ini perlu ditindaklanjuti, tanpa kesan menyuruh kasar.
-  Contoh transformasi:
-  Command: "ingetin divisi konsum untuk menyurvei lokasi tempat beli makanannya ya"
-  pesan yang benar: "Halo, teman-teman divisi Konsumsi! 👋 Yuk mulai disurvei lokasi tempat beli makanan buat acara nanti. Kalau ada kendala boleh banget diomongin di sini ya 🙏"
-  begitu juga dengan divisi yang lain, kamu buat sendiri textnya, okee.
+ATURAN KHUSUS intent "custom" — pesan (WAJIB diisi per assignment):
+- Susun SATU pesan WhatsApp LENGKAP yang berdiri sendiri (orang yang belum baca command aslinya tetap paham) — JANGAN cuma menyalin potongan/ekor kalimat mentah.
+- Kalau assignment ini berkaitan dengan [PESAN_LITERAL] → isi "pesan" cukup string "[PESAN_LITERAL]" (lihat CATATAN KHUSUS di atas).
+- Kalau tidak, susun dengan struktur: (1) sapaan hangat ke divisi/panitia terkait sesuai konteks, misal "Halo, teman-teman divisi Konsumsi! 👋" atau "Halo, teman-teman Panitia Inti! 👋"; (2) kalimat jelas & lengkap soal apa yang perlu dilakukan (tulis ulang natural, perbaiki typo, JANGAN dipotong jadi fragmen); (3) nada ramah tapi tegas — jelas perlu ditindaklanjuti, tanpa kesan menyuruh kasar.
 
 ATURAN KHUSUS intent "deadline_mepet":
-- pesan diabaikan, isi null — tidak dipakai, isi pesan disusun otomatis dari data tugas divisi terkait oleh fungsi lain.
+- "pesan" WAJIB null — tidak dipakai, isi pesan disusun otomatis dari data tugas oleh sistem.
 
 Balas HANYA JSON (tanpa markdown, tanpa penjelasan):
 {
   "valid": boolean,
-  "intent": "custom" | "deadline_mepet",
   "send_now": boolean,
   "assignments": [
     {
+      "intent": "custom" | "deadline_mepet",
       "divisi": string[] | "ALL",
       "target_dates": string[],
-      "target_times": string[]
+      "target_times": string[],
+      "pesan": string | null
     }
-  ],
-  "pesan": string | null
-}
-
-Contoh assignments buat command "ingetin humkes jam 1 siang, acara jam 3 sore" (asumsi hari ini "2026-08-13"):
-"assignments": [
-  { "divisi": ["Humkes"], "target_dates": ["2026-08-13"], "target_times": ["13:00"] },
-  { "divisi": ["Acara"], "target_dates": ["2026-08-13"], "target_times": ["15:00"] }
-]
-
-Contoh assignments buat command "ingetin acara dan pdd besok jam 9 dan jam 2 siang" (satu kelompok, jam sama buat kedua divisi):
-"assignments": [
-  { "divisi": ["Acara", "PDD"], "target_dates": ["2026-08-14"], "target_times": ["09:00", "14:00"] }
-]`;
+  ]
+}`;
 
   const response = await ai.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
-    max_tokens: 900,
+    max_tokens: 1000,
     response_format: { type: "json_object" },
   });
 
   try {
     const parsed = JSON.parse(response.choices[0]?.message?.content || "{}");
-    if (!parsed.valid || (parsed.intent !== "custom" && parsed.intent !== "deadline_mepet")) return null;
+    if (!parsed.valid) return null;
     if (!Array.isArray(parsed.assignments) || parsed.assignments.length === 0) return null;
 
-    // Kalau ada teks literal dari user, paksa intent "custom" dan timpa pesan
-    // hasil model dengan teks ASLI (bukan hasil generate ulang). Ini jalur
-    // paling reliable karena literalPesan diambil murni via regex di atas,
-    // tidak pernah melewati sampling LLM.
-    if (literalPesan) {
-      parsed.intent = "custom";
-      parsed.pesan = literalPesan;
-    }
-
-    if (parsed.intent === "custom" && !parsed.pesan) return null;
+    const sendNow = parsed.send_now === true;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
     const resolveDivisi = (d) => {
       if (d === "ALL") return validDivisi;
@@ -255,48 +234,39 @@ Contoh assignments buat command "ingetin acara dan pdd besok jam 9 dan jam 2 sia
       return null;
     };
 
-    if (parsed.send_now === true) {
-      const allDivisi = new Set();
-      for (const a of parsed.assignments) {
-        const list = resolveDivisi(a.divisi);
-        if (!list) return null;
-        list.forEach((d) => allDivisi.add(d));
-      }
-      if (allDivisi.size === 0) return null;
-
-      return {
-        intent: parsed.intent,
-        send_now: true,
-        schedules: [{ divisi: [...allDivisi], target_dates: [], target_times: [] }],
-        pesan: parsed.intent === "custom" ? parsed.pesan : null,
-      };
-    }
-
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
-
     const schedules = [];
     for (const a of parsed.assignments) {
-      const list = resolveDivisi(a.divisi);
-      if (!list) return null;
+      if (a.intent !== "custom" && a.intent !== "deadline_mepet") return null;
 
-      const dates = [...new Set(a.target_dates || [])];
-      if (dates.length === 0 || !dates.every((d) => dateRegex.test(d))) return null;
-      dates.sort();
+      const divisiList = resolveDivisi(a.divisi);
+      if (!divisiList) return null;
 
-      const times = [...new Set(a.target_times || [])];
-      if (times.length === 0 || !times.every((t) => timeRegex.test(t))) return null;
-      times.sort();
+      let pesan = null;
+      if (a.intent === "custom") {
+        pesan = a.pesan;
+        if (pesan === "[PESAN_LITERAL]") {
+          if (!literalPesan) return null; // AI referensiin literal tapi nggak ketemu kutipan aslinya -> inkonsisten
+          pesan = literalPesan;
+        }
+        if (!pesan) return null;
+      }
 
-      schedules.push({ divisi: list, target_dates: dates, target_times: times });
+      let dates = [];
+      let times = [];
+      if (!sendNow) {
+        dates = [...new Set(a.target_dates || [])];
+        if (dates.length === 0 || !dates.every((d) => dateRegex.test(d))) return null;
+        dates.sort();
+
+        times = [...new Set(a.target_times || [])];
+        if (times.length === 0 || !times.every((t) => timeRegex.test(t))) return null;
+        times.sort();
+      }
+
+      schedules.push({ intent: a.intent, divisi: divisiList, target_dates: dates, target_times: times, pesan });
     }
 
-    return {
-      intent: parsed.intent,
-      send_now: false,
-      schedules,
-      pesan: parsed.intent === "custom" ? parsed.pesan : null,
-    };
+    return { send_now: sendNow, schedules };
   } catch {
     return null;
   }
