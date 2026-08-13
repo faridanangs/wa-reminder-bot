@@ -1,3 +1,4 @@
+// webhook/fonte
 import { NextResponse } from "next/server";
 import { isSenderAllowed } from "@/lib/whitelist";
 import { parseScheduleCommand, toUnixTimestampWITA, generateReminderText } from "@/lib/ai";
@@ -43,7 +44,17 @@ export async function POST(req) {
   const nameSender = payload.name
 
   if (!actualSender || !isSenderAllowed(actualSender)) {
-    sendToFonnte(replyTarget, `sorry yeee ${nameSender}, yang bisa perintah aku cuman anggota paling inti😉`)
+    // PENTING: WAJIB di-await + di-catch. Ini dipanggil untuk SETIAP pesan dari
+    // sender yang belum whitelist (bukan cuma command bot), jadi kalau fetch ke
+    // Fonnte gagal (network blip/ECONNRESET) dan promise-nya dibiarkan "fire and
+    // forget" tanpa handler, itu jadi unhandled rejection yang bikin SELURUH
+    // proses Node crash -- bukan cuma request ini yang gagal.
+    await sendToFonnte(
+      replyTarget,
+      `sorry yeee ${nameSender}, yang bisa perintah aku cuman anggota paling inti😉`
+    ).catch((err) => {
+      console.error("gagal kirim balasan 'not allowed' ke", replyTarget, err);
+    });
     return NextResponse.json({ ok: true, ignored: true });
   }
 
